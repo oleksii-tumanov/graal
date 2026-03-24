@@ -3023,3 +3023,26 @@ class StandalonePointstoUnittestsConfig(mx_unittest.MxUnittestConfig):
 
 
 mx_unittest.register_unittest_config(StandalonePointstoUnittestsConfig())
+
+
+class SvmUnittestConfig(mx_compiler.GraalUnittestConfig):
+
+    def __init__(self):
+        super(SvmUnittestConfig, self).__init__('svm-unittest')
+
+    def apply(self, config):
+        vmArgs, mainClass, mainClassArgs = super(SvmUnittestConfig, self).apply(config)
+
+        # SubstrateVM configure tests can initialize pointsto classes before JVMCI has performed
+        # its dynamic exports, so they need these JVMCI packages exported eagerly.
+        vmArgs.extend([
+            '--add-exports=jdk.internal.vm.ci/jdk.vm.ci.meta=ALL-UNNAMED',
+            '--add-exports=jdk.internal.vm.ci/jdk.vm.ci.meta.annotation=ALL-UNNAMED',
+            '--add-exports=jdk.internal.vm.ci/jdk.vm.ci.meta.annotation=jdk.graal.compiler.vmaccess',
+            '--add-exports=jdk.internal.vm.ci/jdk.vm.ci.code=ALL-UNNAMED',
+        ])
+
+        return (vmArgs, mainClass, mainClassArgs)
+
+
+mx_unittest.register_unittest_config(SvmUnittestConfig())
