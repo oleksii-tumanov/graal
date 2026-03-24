@@ -3012,10 +3012,8 @@ class StandalonePointstoUnittestsConfig(mx_unittest.MxUnittestConfig):
         # VMAccess needs to access jdk.internal.module.Modules
         vmArgs.extend(['--add-exports=java.base/jdk.internal.module=jdk.graal.compiler.vmaccess'])
 
-        # JVMCI is dynamically exported to Graal when JVMCI is initialized. This is too late
-        # for the junit harness which uses reflection to find @Test methods. In addition, the
-        # tests widely use JVMCI classes so JVMCI needs to also export all its packages to
-        # ALL-UNNAMED.
+        # Configure tests may run before JVMCI applies its dynamic exports, so export these
+        # packages eagerly.
         mainClassArgs.extend(['-JUnitOpenPackages', 'jdk.internal.vm.ci/*=jdk.graal.compiler,ALL-UNNAMED'])
         mainClassArgs.extend(['-JUnitOpenPackages', 'org.graalvm.nativeimage/*=ALL-UNNAMED'])
 
@@ -3023,3 +3021,26 @@ class StandalonePointstoUnittestsConfig(mx_unittest.MxUnittestConfig):
 
 
 mx_unittest.register_unittest_config(StandalonePointstoUnittestsConfig())
+
+
+class SvmUnittestConfig(mx_compiler.GraalUnittestConfig):
+
+    def __init__(self):
+        super(SvmUnittestConfig, self).__init__('svm-unittest')
+
+    def apply(self, config):
+        vmArgs, mainClass, mainClassArgs = super(SvmUnittestConfig, self).apply(config)
+
+        # SubstrateVM configure tests can initialize pointsto classes before JVMCI has performed
+        # its dynamic exports, so they need these JVMCI packages exported eagerly.
+        vmArgs.extend([
+            '--add-exports=jdk.internal.vm.ci/jdk.vm.ci.meta=ALL-UNNAMED',
+            '--add-exports=jdk.internal.vm.ci/jdk.vm.ci.meta.annotation=ALL-UNNAMED',
+            '--add-exports=jdk.internal.vm.ci/jdk.vm.ci.meta.annotation=jdk.graal.compiler.vmaccess',
+            '--add-exports=jdk.internal.vm.ci/jdk.vm.ci.code=ALL-UNNAMED',
+        ])
+
+        return (vmArgs, mainClass, mainClassArgs)
+
+
+mx_unittest.register_unittest_config(SvmUnittestConfig())
